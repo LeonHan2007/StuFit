@@ -1,0 +1,9 @@
+# Supabase
+.branches
+.temp
+
+# dotenvx / local secrets (example templates live in repo root)
+.env.keys
+.env.local
+.env.*.local
+!.env*.example
