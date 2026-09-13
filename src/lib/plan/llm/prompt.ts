@@ -1,3 +1,4 @@
+import { WEEKDAY_NAMES } from "@/lib/plan/build-seven-day-week";
 import type { GeneratorParams } from "@/lib/plan/templates/types";
 
 export interface CatalogExerciseForPrompt {
@@ -6,16 +7,6 @@ export interface CatalogExerciseForPrompt {
   category: string;
   equipment: string;
 }
-
-const WEEKDAY_NAMES = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
 
 export function buildSystemPrompt(): string {
   return `You are an expert strength and conditioning coach creating personalized weekly workout plans for students.

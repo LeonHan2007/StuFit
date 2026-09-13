@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { weekdayName } from "@/lib/plan/build-seven-day-week";
 
 export default async function WorkoutPage() {
   const supabase = await createClient();
@@ -43,7 +44,7 @@ export default async function WorkoutPage() {
     .eq("status", "in_progress")
     .maybeSingle();
 
-  const trainingDays = planDays?.filter((d) => !d.is_rest_day) ?? [];
+  const weekDays = planDays ?? [];
 
   return (
     <AppShell title="Workout">
@@ -66,7 +67,7 @@ export default async function WorkoutPage() {
           <Card className="border-emerald-500/30 bg-emerald-500/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                Rest day
+                {weekdayName(todayDay.day_index)} · Rest day
                 <Badge variant="secondary">Streak</Badge>
               </CardTitle>
             </CardHeader>
@@ -103,26 +104,44 @@ export default async function WorkoutPage() {
           </CardContent>
         </Card>
 
-        {trainingDays.length > 0 && (
+        {weekDays.length > 0 && (
           <>
-            <h2 className="text-lg font-semibold">Training days</h2>
-            {trainingDays.map((day) => (
-              <Card key={day.id}>
-                <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-medium">{day.label}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Day {day.day_index}
-                    </p>
-                  </div>
-                  <form action={startWorkout.bind(null, day.id)} className="w-full sm:w-auto">
-                    <Button type="submit" className="h-11 w-full sm:w-auto">
-                      Start
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            ))}
+            <h2 className="text-lg font-semibold">This week</h2>
+            {weekDays.map((day) => {
+              const isToday = day.id === todayDay?.id;
+              const isRest = Boolean(day.is_rest_day);
+              return (
+                <Card
+                  key={day.id}
+                  className={cn(
+                    isToday && !isRest && "border-primary/20 bg-primary/5",
+                    isToday && isRest && "border-emerald-500/30 bg-emerald-500/5"
+                  )}
+                >
+                  <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-2 font-medium">
+                        {weekdayName(day.day_index)}
+                        {isToday && <Badge variant="secondary">Today</Badge>}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {day.label}
+                      </p>
+                    </div>
+                    {!isRest && (
+                      <form
+                        action={startWorkout.bind(null, day.id)}
+                        className="w-full sm:w-auto"
+                      >
+                        <Button type="submit" className="h-11 w-full sm:w-auto">
+                          Start
+                        </Button>
+                      </form>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </>
         )}
 

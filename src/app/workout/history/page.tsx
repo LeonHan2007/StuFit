@@ -22,7 +22,7 @@ export default async function WorkoutHistoryPage() {
       id,
       started_at,
       ended_at,
-      plan_days ( label ),
+      plan_days ( label, day_index ),
       session_exercises (
         id,
         order_index,

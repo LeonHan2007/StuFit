@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { weekdayName } from "@/lib/plan/build-seven-day-week";
 import type { Exercise } from "@/types/database";
 import type { PlanDayWithExercises } from "@/components/plan/plan-types";
 
@@ -115,7 +116,7 @@ export function PlanEditor({
     const next = [...orderedDays];
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
-    setOrderedDays(next);
+    setOrderedDays(next.map((d, i) => ({ ...d, day_index: i + 1 })));
 
     startTransition(async () => {
       try {
@@ -153,7 +154,9 @@ export function PlanEditor({
       {todayDay && !(todayDay.is_rest_day ?? false) && (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
-            <CardTitle>Today: {todayDay.label}</CardTitle>
+            <CardTitle>
+              Today · {weekdayName(todayDay.day_index)}: {todayDay.label}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form action={startWorkout.bind(null, todayDay.id)}>
@@ -164,10 +167,12 @@ export function PlanEditor({
           </CardContent>
         </Card>
       )}
-      {(todayDay?.is_rest_day ?? false) && (
+      {todayDay && (todayDay.is_rest_day ?? false) && (
         <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardHeader>
-            <CardTitle>Today: Rest day</CardTitle>
+            <CardTitle>
+              Today · {weekdayName(todayDay.day_index)}: Rest day
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
@@ -183,7 +188,7 @@ export function PlanEditor({
         </h2>
         <div className="flex min-w-0 gap-2">
           <Input
-            placeholder="New day"
+            placeholder="Workout name"
             value={newDayLabel}
             onChange={(e) => setNewDayLabel(e.target.value)}
             className="h-10 min-w-0 flex-1"
@@ -223,7 +228,7 @@ export function PlanEditor({
                     onDragStart={(e) => handleDragStart(e, index)}
                     onDragEnd={() => setDragIndex(null)}
                     className="hidden cursor-grab touch-none text-muted-foreground active:cursor-grabbing sm:block"
-                    aria-label="Reorder day"
+                    aria-label={`Move ${weekdayName(day.day_index)} workout`}
                     role="button"
                     tabIndex={0}
                   >
@@ -236,7 +241,7 @@ export function PlanEditor({
                       variant="outline"
                       size="icon"
                       className="h-10 w-10"
-                      aria-label="Move day up"
+                      aria-label={`Move ${weekdayName(day.day_index)} up`}
                       disabled={pending || index === 0}
                       onClick={() => moveDay(index, -1)}
                     >
@@ -247,7 +252,7 @@ export function PlanEditor({
                       variant="outline"
                       size="icon"
                       className="h-10 w-10"
-                      aria-label="Move day down"
+                      aria-label={`Move ${weekdayName(day.day_index)} down`}
                       disabled={pending || index === orderedDays.length - 1}
                       onClick={() => moveDay(index, 1)}
                     >
@@ -257,7 +262,7 @@ export function PlanEditor({
 
                   <div className="min-w-0 flex-1">
                     <p className="font-medium leading-tight">
-                      Day {day.day_index}: {day.label}
+                      {weekdayName(day.day_index)}: {day.label}
                     </p>
                     {!isEditing && (
                       <p className="truncate text-sm text-muted-foreground">

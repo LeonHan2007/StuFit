@@ -267,7 +267,7 @@ export function PlanDayEditPanel({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor={`day-label-${day.id}`} className="text-xs">
-            Day name
+            Workout name
           </Label>
           <Input
             id={`day-label-${day.id}`}

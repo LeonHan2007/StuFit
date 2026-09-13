@@ -42,7 +42,7 @@ export default async function DashboardPage() {
         .limit(8),
       supabase
         .from("workout_sessions")
-        .select("id, started_at, ended_at, status, qualifies_for_streak, plan_days ( label )")
+        .select("id, started_at, ended_at, status, qualifies_for_streak, plan_days ( label, day_index )")
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("ended_at", { ascending: false })

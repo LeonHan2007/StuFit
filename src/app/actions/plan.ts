@@ -306,7 +306,7 @@ export async function addPlanDay(label: string) {
   const { error } = await supabase.from("plan_days").insert({
     plan_id: planId,
     day_index: dayIndex,
-    label: label.trim() || `Day ${dayIndex}`,
+    label: label.trim() || "Workout",
     is_rest_day: false,
   });
 

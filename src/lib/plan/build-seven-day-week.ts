@@ -1,4 +1,18 @@
 /** Calendar weekday indices: Mon=1 … Sun=7 */
+export const WEEKDAY_NAMES = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+] as const;
+
+export function weekdayName(dayIndex: number): string {
+  return WEEKDAY_NAMES[dayIndex - 1] ?? `Day ${dayIndex}`;
+}
+
 const TRAINING_SLOTS: Record<number, number[]> = {
   1: [1],
   2: [1, 4],
