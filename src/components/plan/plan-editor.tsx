@@ -3,26 +3,18 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  ChevronDown,
-  ChevronUp,
-  GripVertical,
-  Plus,
-  Trash2,
-  Pencil,
-} from "lucide-react";
-import {
-  addPlanDay,
-  removePlanDay,
-  reorderPlanDays,
-} from "@/app/actions/plan";
+import { Plus, Pencil } from "lucide-react";
+import { addPlanDay } from "@/app/actions/plan";
 import { startWorkout } from "@/app/actions/workout";
 import { PlanDayEditPanel } from "@/components/plan/plan-day-edit-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { weekdayName } from "@/lib/plan/build-seven-day-week";
+import {
+  WEEKDAY_NAMES,
+  weekdayName,
+} from "@/lib/plan/build-seven-day-week";
 import type { Exercise } from "@/types/database";
 import type { PlanDayWithExercises } from "@/components/plan/plan-types";
 
@@ -61,38 +53,21 @@ export function PlanEditor({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [orderedDays, setOrderedDays] = useState(planDays);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [days, setDays] = useState(planDays);
   const [editingDayId, setEditingDayId] = useState<string | null>(null);
-  const [newDayLabel, setNewDayLabel] = useState("");
 
   useEffect(() => {
-    setOrderedDays(planDays);
+    setDays(planDays);
   }, [planDays]);
 
-  function handleAddDay() {
+  function handleAddDay(dayIndex: number, isRestDay: boolean) {
     startTransition(async () => {
       try {
-        await addPlanDay(newDayLabel);
-        setNewDayLabel("");
-        toast.success("Day added");
+        await addPlanDay(isRestDay ? "Rest" : "Workout", dayIndex, isRestDay);
+        toast.success(isRestDay ? "Rest day added" : "Workout added");
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to add day");
-      }
-    });
-  }
-
-  function handleRemoveDay(planDayId: string) {
-    if (!confirm("Remove this day and all its exercises?")) return;
-    startTransition(async () => {
-      try {
-        await removePlanDay(planDayId);
-        if (editingDayId === planDayId) setEditingDayId(null);
-        toast.success("Day removed");
-        router.refresh();
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Failed to remove day");
+        toast.error(e instanceof Error ? e.message : "Failed to add");
       }
     });
   }
@@ -101,53 +76,19 @@ export function PlanEditor({
     setEditingDayId((current) => (current === dayId ? null : dayId));
   }
 
-  function handleDragStart(e: React.DragEvent, index: number) {
-    e.dataTransfer.effectAllowed = "move";
-    setDragIndex(index);
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-  }
-
-  function commitReorder(fromIndex: number, toIndex: number) {
-    if (fromIndex === toIndex) return;
-
-    const next = [...orderedDays];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    setOrderedDays(next.map((d, i) => ({ ...d, day_index: i + 1 })));
-
-    startTransition(async () => {
-      try {
-        await reorderPlanDays(next.map((d) => d.id));
-        router.refresh();
-      } catch (e) {
-        setOrderedDays(planDays);
-        toast.error(e instanceof Error ? e.message : "Failed to reorder");
-      }
-    });
-  }
-
-  function handleDrop(dropIndex: number) {
-    if (dragIndex === null || dragIndex === dropIndex) {
-      setDragIndex(null);
-      return;
-    }
-    commitReorder(dragIndex, dropIndex);
-    setDragIndex(null);
-  }
-
-  function moveDay(index: number, direction: -1 | 1) {
-    const toIndex = index + direction;
-    if (toIndex < 0 || toIndex >= orderedDays.length) return;
-    commitReorder(index, toIndex);
-  }
-
   const todayDay =
     !isProposal && todayDayId
-      ? orderedDays.find((d) => d.id === todayDayId) ?? orderedDays[0]
+      ? days.find((d) => d.id === todayDayId) ?? days[0]
       : null;
+
+  const week = WEEKDAY_NAMES.map((name, i) => {
+    const dayIndex = i + 1;
+    return {
+      name,
+      dayIndex,
+      day: days.find((d) => d.day_index === dayIndex) ?? null,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -182,141 +123,127 @@ export function PlanEditor({
         </Card>
       )}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">
-          {isProposal ? "Edit proposal" : "Your plan"}
-        </h2>
-        <div className="flex min-w-0 gap-2">
-          <Input
-            placeholder="Workout name"
-            value={newDayLabel}
-            onChange={(e) => setNewDayLabel(e.target.value)}
-            className="h-10 min-w-0 flex-1"
-          />
-          <Button
-            variant="outline"
-            onClick={handleAddDay}
-            disabled={pending || orderedDays.length >= 7}
-            className="h-11 shrink-0 gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      </div>
+      <h2 className="text-lg font-semibold">
+        {isProposal ? "Edit proposal" : "Your plan"}
+      </h2>
 
       <ul className="space-y-2">
-        {orderedDays.map((day, index) => {
-          const isEditing = editingDayId === day.id;
+        {week.map(({ name, dayIndex, day }) => {
+          const isEditing = day != null && editingDayId === day.id;
+          const isToday = day != null && day.id === todayDayId;
+          const isRest = day?.is_rest_day ?? false;
 
           return (
-            <li
-              key={day.id}
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(index)}
-              className={cn(
-                "overflow-hidden rounded-xl border bg-card transition-opacity",
-                (day.is_rest_day ?? false) && "border-dashed bg-muted/30",
-                dragIndex === index && "opacity-50",
-                isEditing && "ring-1 ring-primary/30"
-              )}
-            >
-              <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
-                  <div
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
-                    onDragEnd={() => setDragIndex(null)}
-                    className="hidden cursor-grab touch-none text-muted-foreground active:cursor-grabbing sm:block"
-                    aria-label={`Move ${weekdayName(day.day_index)} workout`}
-                    role="button"
-                    tabIndex={0}
-                  >
-                    <GripVertical className="h-5 w-5" />
-                  </div>
-
-                  <div className="flex shrink-0 flex-col gap-0.5 sm:hidden">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10"
-                      aria-label={`Move ${weekdayName(day.day_index)} up`}
-                      disabled={pending || index === 0}
-                      onClick={() => moveDay(index, -1)}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10"
-                      aria-label={`Move ${weekdayName(day.day_index)} down`}
-                      disabled={pending || index === orderedDays.length - 1}
-                      onClick={() => moveDay(index, 1)}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium leading-tight">
-                      {weekdayName(day.day_index)}: {day.label}
-                    </p>
-                    {!isEditing && (
-                      <p className="truncate text-sm text-muted-foreground">
-                        {daySummary(day)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {!isProposal && !(day.is_rest_day ?? false) && (
-                    <form action={startWorkout.bind(null, day.id)} className="min-w-0 flex-1 sm:flex-initial">
-                      <Button
-                        type="submit"
-                        variant="outline"
-                        className="h-11 w-full sm:w-auto"
-                      >
-                        Start
-                      </Button>
-                    </form>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-10 w-10 shrink-0",
-                      isEditing ? "text-primary" : "text-muted-foreground"
-                    )}
-                    aria-label={isEditing ? "Close edit" : `Edit ${day.label}`}
-                    aria-expanded={isEditing}
-                    onClick={() => toggleEdit(day.id)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 shrink-0 text-destructive hover:text-destructive"
-                    aria-label={`Delete ${day.label}`}
-                    onClick={() => handleRemoveDay(day.id)}
-                    disabled={pending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+            <li key={dayIndex} className="flex items-stretch gap-2 sm:gap-3">
+              <div
+                className={cn(
+                  "flex w-16 shrink-0 flex-col justify-center border-r border-border/70 pr-2 sm:w-28 sm:pr-3",
+                  isToday && "text-primary"
+                )}
+              >
+                <p className="text-sm font-semibold leading-tight sm:text-base">
+                  {name}
+                </p>
+                {isToday && (
+                  <Badge variant="secondary" className="mt-1 w-fit text-[10px]">
+                    Today
+                  </Badge>
+                )}
               </div>
 
-              {isEditing && (
-                <PlanDayEditPanel day={day} exerciseCatalog={exerciseCatalog} />
-              )}
+              <div
+                className={cn(
+                  "min-w-0 flex-1 overflow-hidden rounded-xl border bg-card",
+                  isRest && "border-dashed bg-muted/30",
+                  isEditing && "ring-1 ring-primary/30",
+                  isToday && !isRest && "border-primary/20 bg-primary/5"
+                )}
+              >
+                {day ? (
+                  <>
+                    <div className="flex flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium leading-tight">{day.label}</p>
+                        {!isEditing && (
+                          <p className="truncate text-sm text-muted-foreground">
+                            {daySummary(day)}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {!isProposal && !isRest && (
+                          <form
+                            action={startWorkout.bind(null, day.id)}
+                            className="min-w-0 flex-1 sm:flex-initial"
+                          >
+                            <Button
+                              type="submit"
+                              variant="outline"
+                              className="h-11 w-full sm:w-auto"
+                            >
+                              Start
+                            </Button>
+                          </form>
+                        )}
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-10 w-10 shrink-0",
+                            isEditing
+                              ? "text-primary"
+                              : "text-muted-foreground"
+                          )}
+                          aria-label={
+                            isEditing ? "Close edit" : `Edit ${name} workout`
+                          }
+                          aria-expanded={isEditing}
+                          onClick={() => toggleEdit(day.id)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {isEditing && (
+                      <PlanDayEditPanel
+                        day={day}
+                        exerciseCatalog={exerciseCatalog}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      No workout on this day
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-11 gap-1"
+                        disabled={pending}
+                        onClick={() => handleAddDay(dayIndex, false)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Workout
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-11"
+                        disabled={pending}
+                        onClick={() => handleAddDay(dayIndex, true)}
+                      >
+                        Rest
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </li>
           );
         })}

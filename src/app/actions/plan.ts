@@ -282,7 +282,11 @@ async function assertPlanExerciseOwnership(
   return row;
 }
 
-export async function addPlanDay(label: string) {
+export async function addPlanDay(
+  label: string,
+  dayIndex?: number,
+  isRestDay = false
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -299,15 +303,18 @@ export async function addPlanDay(label: string) {
     .order("day_index");
 
   const used = new Set((existing ?? []).map((d) => d.day_index));
-  let dayIndex = 1;
-  while (used.has(dayIndex) && dayIndex <= 7) dayIndex++;
-  if (dayIndex > 7) throw new Error("Maximum 7 days per plan");
+  let index = dayIndex ?? 1;
+  if (dayIndex == null) {
+    while (used.has(index) && index <= 7) index++;
+  }
+  if (index < 1 || index > 7) throw new Error("Invalid weekday");
+  if (used.has(index)) throw new Error("That weekday already has a workout");
 
   const { error } = await supabase.from("plan_days").insert({
     plan_id: planId,
-    day_index: dayIndex,
-    label: label.trim() || "Workout",
-    is_rest_day: false,
+    day_index: index,
+    label: label.trim() || (isRestDay ? "Rest" : "Workout"),
+    is_rest_day: isRestDay,
   });
 
   if (error) throw new Error(error.message);
@@ -326,6 +333,38 @@ export async function removePlanDay(planDayId: string) {
   const { error } = await supabase.from("plan_days").delete().eq("id", planDayId);
   if (error) throw new Error(error.message);
   revalidatePath("/plan");
+}
+
+export async function setPlanDayRest(planDayId: string, isRestDay: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  await assertPlanDayOwnership(supabase, planDayId, user.id);
+
+  const { data: day } = await supabase
+    .from("plan_days")
+    .select("label")
+    .eq("id", planDayId)
+    .single();
+
+  const update: { is_rest_day: boolean; label?: string } = {
+    is_rest_day: isRestDay,
+  };
+  if (!isRestDay && day?.label?.trim().toLowerCase() === "rest") {
+    update.label = "Workout";
+  }
+
+  const { error } = await supabase
+    .from("plan_days")
+    .update(update)
+    .eq("id", planDayId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/plan");
+  revalidatePath("/workout");
 }
 
 export async function updatePlanDayLabel(planDayId: string, label: string) {
@@ -403,43 +442,45 @@ export async function removePlanExercise(planExerciseId: string) {
   revalidatePath("/plan");
 }
 
-export async function reorderPlanDays(orderedDayIds: string[]) {
+export async function reorderPlanExercises(
+  planDayId: string,
+  orderedExerciseIds: string[]
+) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const planId = await getEditablePlanId(supabase, user.id);
-  if (!planId) throw new Error("No plan to edit");
+  await assertPlanDayOwnership(supabase, planDayId, user.id);
 
-  const { data: days } = await supabase
-    .from("plan_days")
-    .select("id, day_index")
-    .eq("plan_id", planId);
+  const { data: rows } = await supabase
+    .from("plan_day_exercises")
+    .select("id, order_index")
+    .eq("plan_day_id", planDayId);
 
-  const ids = new Set((days ?? []).map((d) => d.id));
+  const ids = new Set((rows ?? []).map((r) => r.id));
   if (
-    !days ||
-    days.length !== orderedDayIds.length ||
-    !orderedDayIds.every((id) => ids.has(id))
+    !rows ||
+    rows.length !== orderedExerciseIds.length ||
+    !orderedExerciseIds.every((id) => ids.has(id))
   ) {
-    throw new Error("Invalid day order");
+    throw new Error("Invalid exercise order");
   }
 
-  for (const day of days) {
+  for (const row of rows) {
     const { error } = await supabase
-      .from("plan_days")
-      .update({ day_index: day.day_index + 100 })
-      .eq("id", day.id);
+      .from("plan_day_exercises")
+      .update({ order_index: row.order_index + 1000 })
+      .eq("id", row.id);
     if (error) throw new Error(error.message);
   }
 
-  for (let i = 0; i < orderedDayIds.length; i++) {
+  for (let i = 0; i < orderedExerciseIds.length; i++) {
     const { error } = await supabase
-      .from("plan_days")
-      .update({ day_index: i + 1 })
-      .eq("id", orderedDayIds[i]);
+      .from("plan_day_exercises")
+      .update({ order_index: i })
+      .eq("id", orderedExerciseIds[i]);
     if (error) throw new Error(error.message);
   }
 

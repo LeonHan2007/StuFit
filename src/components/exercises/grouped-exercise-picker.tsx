@@ -35,12 +35,19 @@ export function GroupedExercisePicker({
 
   const filtered = useMemo(() => {
     if (!isSearching) return available;
-    return available.filter(
-      (e) =>
-        e.name.toLowerCase().includes(searchLower) ||
+    const compact = (value: string) => value.toLowerCase().replace(/[\s-]+/g, "");
+    const compactQuery = compact(searchLower);
+    return available.filter((e) => {
+      const name = e.name.toLowerCase();
+      return (
+        name.includes(searchLower) ||
+        compact(e.name).includes(compactQuery) ||
+        compact(e.slug).includes(compactQuery) ||
         e.muscle_group.toLowerCase().includes(searchLower) ||
+        e.equipment.toLowerCase().includes(searchLower) ||
         e.category.toLowerCase().includes(searchLower)
-    );
+      );
+    });
   }, [available, isSearching, searchLower]);
 
   const grouped = useMemo(() => {
