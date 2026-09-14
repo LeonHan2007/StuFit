@@ -207,7 +207,7 @@ async function assertPlanDayOwnership(
 ) {
   const { data: day } = await supabase
     .from("plan_days")
-    .select("id, plan_id")
+    .select("id, plan_id, is_rest_day")
     .eq("id", planDayId)
     .single();
 
@@ -356,7 +356,10 @@ export async function addPlanExercise(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  await assertPlanDayOwnership(supabase, planDayId, user.id);
+  const day = await assertPlanDayOwnership(supabase, planDayId, user.id);
+  if (day.is_rest_day) {
+    throw new Error("Can't add exercises to a rest day");
+  }
 
   const { data: existing } = await supabase
     .from("plan_day_exercises")

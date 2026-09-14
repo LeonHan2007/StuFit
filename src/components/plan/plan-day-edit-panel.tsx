@@ -306,6 +306,7 @@ export function PlanDayEditPanel({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [label, setLabel] = useState(day.label);
+  const [isRestDay, setIsRestDay] = useState(day.is_rest_day ?? false);
   const [orderedExercises, setOrderedExercises] = useState(() =>
     sortExercises(day.plan_day_exercises ?? [])
   );
@@ -314,6 +315,10 @@ export function PlanDayEditPanel({
   useEffect(() => {
     setLabel(day.label);
   }, [day.label]);
+
+  useEffect(() => {
+    setIsRestDay(day.is_rest_day ?? false);
+  }, [day.is_rest_day]);
 
   useEffect(() => {
     setOrderedExercises(sortExercises(day.plan_day_exercises ?? []));
@@ -337,12 +342,14 @@ export function PlanDayEditPanel({
     });
   }
 
-  function handleRestChange(isRestDay: boolean) {
+  function handleRestChange(nextIsRestDay: boolean) {
+    setIsRestDay(nextIsRestDay);
     startTransition(async () => {
       try {
-        await setPlanDayRest(day.id, isRestDay);
+        await setPlanDayRest(day.id, nextIsRestDay);
         refresh();
       } catch (e) {
+        setIsRestDay(day.is_rest_day ?? false);
         toast.error(e instanceof Error ? e.message : "Failed to update");
       }
     });
@@ -411,59 +418,65 @@ export function PlanDayEditPanel({
 
         <label className="flex cursor-pointer items-center gap-2 text-sm">
           <Checkbox
-            checked={day.is_rest_day ?? false}
+            checked={isRestDay}
             onCheckedChange={(v) => handleRestChange(v === true)}
             disabled={pending}
           />
           Rest day
         </label>
 
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">Exercises</p>
-          {orderedExercises.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No exercises yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {orderedExercises.map((pe, index) => {
-                const ex = resolveExercise(pe.exercises);
-                return (
-                  <ExerciseRow
-                    key={pe.id}
-                    planExerciseId={pe.id}
-                    name={ex?.name ?? "Unknown"}
-                    muscleGroup={ex?.muscle_group ?? ""}
-                    sets={pe.sets}
-                    repsMin={pe.reps_min}
-                    repsMax={pe.reps_max}
-                    restSeconds={pe.rest_seconds}
-                    index={index}
-                    total={orderedExercises.length}
-                    isDragging={dragIndex === index}
-                    pending={pending}
-                    onUpdated={refresh}
-                    onRemove={() => handleRemoveExercise(pe.id)}
-                    onMove={(direction) =>
-                      commitReorder(index, index + direction)
-                    }
-                    onDragStart={(e) => {
-                      e.dataTransfer.effectAllowed = "move";
-                      setDragIndex(index);
-                    }}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={() => handleDrop(index)}
-                    onDragEnd={() => setDragIndex(null)}
-                  />
-                );
-              })}
-            </ul>
-          )}
-          <PlanAddExerciseDialog
-            planDayId={day.id}
-            catalog={exerciseCatalog}
-            existingIds={existingIds}
-            onAdded={refresh}
-          />
-        </div>
+        {isRestDay ? (
+          <p className="text-sm text-muted-foreground">
+            Rest day — no exercises.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Exercises</p>
+            {orderedExercises.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No exercises yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {orderedExercises.map((pe, index) => {
+                  const ex = resolveExercise(pe.exercises);
+                  return (
+                    <ExerciseRow
+                      key={pe.id}
+                      planExerciseId={pe.id}
+                      name={ex?.name ?? "Unknown"}
+                      muscleGroup={ex?.muscle_group ?? ""}
+                      sets={pe.sets}
+                      repsMin={pe.reps_min}
+                      repsMax={pe.reps_max}
+                      restSeconds={pe.rest_seconds}
+                      index={index}
+                      total={orderedExercises.length}
+                      isDragging={dragIndex === index}
+                      pending={pending}
+                      onUpdated={refresh}
+                      onRemove={() => handleRemoveExercise(pe.id)}
+                      onMove={(direction) =>
+                        commitReorder(index, index + direction)
+                      }
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragIndex(index);
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={() => handleDrop(index)}
+                      onDragEnd={() => setDragIndex(null)}
+                    />
+                  );
+                })}
+              </ul>
+            )}
+            <PlanAddExerciseDialog
+              planDayId={day.id}
+              catalog={exerciseCatalog}
+              existingIds={existingIds}
+              onAdded={refresh}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
