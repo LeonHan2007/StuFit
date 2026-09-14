@@ -15,7 +15,7 @@ export function PlanReadyToast() {
     }
     if (searchParams.get("proposal") === "1") {
       toast.message("Review your proposed plan", {
-        description: "Edit anything you like, then tap Confirm plan.",
+        description: "Edits save automatically. Tap Save and use this plan, or start a workout.",
       });
       router.replace("/plan");
     }

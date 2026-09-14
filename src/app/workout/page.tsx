@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentPlan } from "@/lib/plan/current-plan";
 import { AppShell } from "@/components/layout/app-shell";
 import { startWorkout } from "@/app/actions/workout";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,12 +17,7 @@ export default async function WorkoutPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const { data: plan } = await supabase
-    .from("workout_plans")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .single();
+  const plan = await getCurrentPlan(supabase, user.id);
 
   const { data: planDays } = plan
     ? await supabase

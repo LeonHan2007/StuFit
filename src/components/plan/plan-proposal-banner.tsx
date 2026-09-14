@@ -76,8 +76,9 @@ export function PlanProposalBanner({ planId }: { planId: string }) {
         <div>
           <p className="font-semibold">Review your proposed plan</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Edit days and exercises below, or describe changes and regenerate.
-            Your current plan stays active until you confirm.
+            Edits save automatically. Confirm this plan — or start a workout —
+            to replace your current one. You can also describe changes and
+            regenerate.
           </p>
         </div>
 
@@ -114,7 +115,7 @@ export function PlanProposalBanner({ planId }: { planId: string }) {
             onClick={handleConfirm}
             disabled={pending}
           >
-            Confirm plan
+            {pending ? "Saving..." : "Save and use this plan"}
           </Button>
           <Button
             variant="outline"

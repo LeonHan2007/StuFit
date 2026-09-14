@@ -76,10 +76,9 @@ export function PlanEditor({
     setEditingDayId((current) => (current === dayId ? null : dayId));
   }
 
-  const todayDay =
-    !isProposal && todayDayId
-      ? days.find((d) => d.id === todayDayId) ?? days[0]
-      : null;
+  const todayDay = todayDayId
+    ? days.find((d) => d.id === todayDayId) ?? days[0]
+    : null;
 
   const week = WEEKDAY_NAMES.map((name, i) => {
     const dayIndex = i + 1;
@@ -172,7 +171,7 @@ export function PlanEditor({
                       </div>
 
                       <div className="flex flex-wrap gap-2">
-                        {!isProposal && !isRest && (
+                        {!isRest && (
                           <form
                             action={startWorkout.bind(null, day.id)}
                             className="min-w-0 flex-1 sm:flex-initial"

@@ -3,11 +3,13 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchExerciseCatalog } from "@/lib/exercises/catalog";
+import { getCurrentPlan } from "@/lib/plan/current-plan";
 import { AppShell } from "@/components/layout/app-shell";
 import { PlanReadyToast } from "@/components/plan/plan-ready-toast";
 import { PlanProposalBanner } from "@/components/plan/plan-proposal-banner";
 import { PlanEditor } from "@/components/plan/plan-editor";
 import { buttonVariants } from "@/components/ui/button";
+
 async function loadPlanDays(supabase: Awaited<ReturnType<typeof createClient>>, planId: string) {
   return supabase
     .from("plan_days")
@@ -50,29 +52,13 @@ export default async function PlanPage() {
     redirect("/onboarding");
   }
 
-  const { data: draftPlan } = await supabase
-    .from("workout_plans")
-    .select("id, name")
-    .eq("user_id", user.id)
-    .eq("is_active", false)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: activePlan } = await supabase
-    .from("workout_plans")
-    .select("id, name")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .maybeSingle();
-
-  const plan = draftPlan ?? activePlan;
+  const plan = await getCurrentPlan(supabase, user.id);
 
   if (!plan) {
     redirect("/onboarding?retake=1");
   }
 
-  const isProposal = !!draftPlan;
+  const isProposal = plan.isProposal;
 
   const [{ data: planDays }, exerciseCatalog] = await Promise.all([
     loadPlanDays(supabase, plan.id),
@@ -90,11 +76,11 @@ export default async function PlanPage() {
         <PlanReadyToast />
       </Suspense>
       <div className="space-y-6">
-        {isProposal && <PlanProposalBanner planId={draftPlan.id} />}
+        {isProposal && <PlanProposalBanner planId={plan.id} />}
 
         <PlanEditor
           planDays={planDays ?? []}
-          todayDayId={isProposal ? undefined : todayDay?.id}
+          todayDayId={todayDay?.id}
           exerciseCatalog={exerciseCatalog}
           isProposal={isProposal}
         />

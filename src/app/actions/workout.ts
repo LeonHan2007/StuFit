@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { activatePlanOwningDay } from "@/lib/plan/current-plan";
 import {
   checkCoordinatesWithinLocations,
   validateStreakQualification,
@@ -31,6 +32,13 @@ export async function startWorkout(planDayId?: string) {
   if (!user) redirect("/auth/login");
 
   const expectedDurationSeconds = await getExpectedDurationSeconds(supabase, user.id);
+
+  if (planDayId) {
+    await activatePlanOwningDay(supabase, user.id, planDayId);
+    revalidatePath("/plan");
+    revalidatePath("/workout");
+    revalidatePath("/dashboard");
+  }
 
   const { data: session, error } = await supabase
     .from("workout_sessions")

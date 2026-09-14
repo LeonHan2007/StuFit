@@ -9,35 +9,16 @@ import {
   loadPlanSnapshot,
   onboardingRowToGeneratorParams,
 } from "@/lib/plan/onboarding-params";
+import { activatePlanForUser, getCurrentPlan } from "@/lib/plan/current-plan";
 import { replaceDraftPlanContent } from "@/lib/plan/replace-draft";
 import { reviseDraftPlanInPlace } from "@/lib/plan/revise-draft";
 import { planRevisionSchema } from "@/lib/validations/plan-revision";
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-async function getActivePlanId(supabase: SupabaseClient, userId: string) {
-  const { data: plan } = await supabase
-    .from("workout_plans")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .maybeSingle();
-  return plan?.id ?? null;
-}
-
-/** Draft proposal takes priority over the active plan for editing. */
 async function getEditablePlanId(supabase: SupabaseClient, userId: string) {
-  const { data: draft } = await supabase
-    .from("workout_plans")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("is_active", false)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (draft) return draft.id;
-  return getActivePlanId(supabase, userId);
+  const plan = await getCurrentPlan(supabase, userId);
+  return plan?.id ?? null;
 }
 
 export async function confirmPlan(planId: string) {
@@ -47,31 +28,7 @@ export async function confirmPlan(planId: string) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data: plan } = await supabase
-    .from("workout_plans")
-    .select("id, user_id, is_active")
-    .eq("id", planId)
-    .single();
-
-  if (!plan || plan.user_id !== user.id) {
-    throw new Error("Plan not found");
-  }
-  if (plan.is_active) {
-    redirect("/plan?ready=1");
-  }
-
-  await supabase
-    .from("workout_plans")
-    .update({ is_active: false })
-    .eq("user_id", user.id)
-    .eq("is_active", true);
-
-  const { error } = await supabase
-    .from("workout_plans")
-    .update({ is_active: true })
-    .eq("id", planId);
-
-  if (error) throw new Error(error.message);
+  await activatePlanForUser(supabase, user.id, planId);
 
   revalidatePath("/plan");
   revalidatePath("/workout");
