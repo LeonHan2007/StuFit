@@ -41,7 +41,7 @@ export default async function AccountabilityPage({
     ]);
 
   const connected = !!integration;
-  const accountabilityEnabled = profile?.streak_accountability_enabled !== false;
+  const accountabilityEnabled = profile?.streak_accountability_enabled === true;
 
   return (
     <Page title="Accountability">

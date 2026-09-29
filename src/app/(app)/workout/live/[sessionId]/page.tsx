@@ -99,7 +99,7 @@ export default async function LiveWorkoutPage({
         exerciseCatalog={exerciseCatalog ?? []}
         hasWorkoutLocations={(locationCount ?? 0) > 0}
         isPlannedWorkout={!!session.plan_day_id}
-        accountabilityEnabled={profile?.streak_accountability_enabled !== false}
+        accountabilityEnabled={profile?.streak_accountability_enabled === true}
       />
     </Page>
   );

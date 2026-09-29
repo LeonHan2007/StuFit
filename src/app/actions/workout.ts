@@ -202,7 +202,7 @@ export async function completeWorkout(sessionId: string) {
       longitude: Number(l.longitude),
       radius_meters: l.radius_meters,
     })),
-    requireLocationAccountability: profile?.streak_accountability_enabled !== false,
+    requireLocationAccountability: profile?.streak_accountability_enabled === true,
   });
 
   const { error } = await supabase
