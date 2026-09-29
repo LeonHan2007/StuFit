@@ -7,6 +7,7 @@ import { signOut, togglePrivacy, updateProfile } from "@/app/actions/profile";
 import { ProfileAvatarUpload } from "@/components/account/profile-avatar-upload";
 import { UsernameField } from "@/components/account/username-field";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -147,9 +148,9 @@ export function ProfileForm({
       </Button>
 
       <form action={signOut}>
-        <Button type="submit" variant="outline" className="h-11 w-full">
+        <SubmitButton variant="outline" className="h-11 w-full">
           Sign out
-        </Button>
+        </SubmitButton>
       </form>
     </div>
   );

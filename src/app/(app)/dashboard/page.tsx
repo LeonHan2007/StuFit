@@ -2,9 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { Flame, Trophy } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  getRequestProfile,
+  getRequestUser,
+} from "@/lib/supabase/server";
 import { VolumeChart } from "@/components/dashboard/volume-chart";
-import { AppShell } from "@/components/layout/app-shell";
+import { Page } from "@/components/layout/page";
 import {
   getStreakStats,
   getWeeklySessionCount,
@@ -17,16 +21,10 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed_at, display_name, timezone")
-    .eq("id", user.id)
-    .single();
+  const profile = await getRequestProfile(user.id);
 
   if (!profile?.onboarding_completed_at) redirect("/onboarding");
 
@@ -59,7 +57,7 @@ export default async function DashboardPage() {
     }));
 
   return (
-    <AppShell title={`Hey, ${profile.display_name ?? "athlete"}`}>
+    <Page title={`Hey, ${profile.display_name ?? "athlete"}`}>
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Card>
@@ -168,6 +166,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-    </AppShell>
+    </Page>
   );
 }

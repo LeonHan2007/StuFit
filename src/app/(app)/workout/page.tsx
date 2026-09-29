@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getRequestUser } from "@/lib/supabase/server";
 import { getCurrentPlan } from "@/lib/plan/current-plan";
-import { AppShell } from "@/components/layout/app-shell";
+import { Page } from "@/components/layout/page";
 import { startWorkout } from "@/app/actions/workout";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +13,18 @@ import { weekdayName } from "@/lib/plan/build-seven-day-week";
 
 export default async function WorkoutPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const plan = await getCurrentPlan(supabase, user.id);
+  const [plan, { data: activeSession }] = await Promise.all([
+    getCurrentPlan(supabase, user.id),
+    supabase
+      .from("workout_sessions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "in_progress")
+      .maybeSingle(),
+  ]);
 
   const { data: planDays } = plan
     ? await supabase
@@ -33,17 +40,10 @@ export default async function WorkoutPage() {
     planDays?.find((d) => d.day_index === todayIndex) ?? planDays?.[0];
   const isRestToday = Boolean(todayDay?.is_rest_day);
 
-  const { data: activeSession } = await supabase
-    .from("workout_sessions")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("status", "in_progress")
-    .maybeSingle();
-
   const weekDays = planDays ?? [];
 
   return (
-    <AppShell title="Workout">
+    <Page title="Workout">
       <div className="space-y-4">
         {activeSession && (
           <Card className="border-orange-500/50 bg-orange-500/10">
@@ -72,9 +72,9 @@ export default async function WorkoutPage() {
                 Rest day — counts toward your streak. No workout required today.
               </p>
               <form action={startWorkout.bind(null, todayDay.id)}>
-                <Button type="submit" variant="outline" className="w-full">
+                <SubmitButton variant="outline" className="w-full">
                   Work out anyway
-                </Button>
+                </SubmitButton>
               </form>
             </CardContent>
           </Card>
@@ -87,15 +87,15 @@ export default async function WorkoutPage() {
           <CardContent className="space-y-3">
             {todayDay && !isRestToday && (
               <form action={startWorkout.bind(null, todayDay.id)}>
-                <Button type="submit" className="h-12 w-full">
+                <SubmitButton className="h-12 w-full">
                   Start today&apos;s workout
-                </Button>
+                </SubmitButton>
               </form>
             )}
             <form action={startWorkout.bind(null, undefined)}>
-              <Button type="submit" variant="outline" className="h-12 w-full">
+              <SubmitButton variant="outline" className="h-12 w-full">
                 Empty workout (add exercises as you go)
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -129,9 +129,9 @@ export default async function WorkoutPage() {
                         action={startWorkout.bind(null, day.id)}
                         className="w-full sm:w-auto"
                       >
-                        <Button type="submit" className="h-11 w-full sm:w-auto">
+                        <SubmitButton className="h-11 w-full sm:w-auto">
                           Start
-                        </Button>
+                        </SubmitButton>
                       </form>
                     )}
                   </CardContent>
@@ -150,6 +150,6 @@ export default async function WorkoutPage() {
           </p>
         )}
       </div>
-    </AppShell>
+    </Page>
   );
 }

@@ -84,20 +84,31 @@ async function applyEquipmentExclusions(
   rules: RevisionRules
 ): Promise<number> {
   let changes = 0;
+  const { data: allRows } = await supabase
+    .from("plan_day_exercises")
+    .select(
+      `
+      id,
+      plan_day_id,
+      exercise_id,
+      exercises ( id, slug, name, muscle_group, equipment, category )
+    `
+    )
+    .in(
+      "plan_day_id",
+      planDays.map((day) => day.id)
+    )
+    .order("order_index");
+
+  const rowsByDay = new Map<string, NonNullable<typeof allRows>>();
+  for (const row of allRows ?? []) {
+    const list = rowsByDay.get(row.plan_day_id) ?? [];
+    list.push(row);
+    rowsByDay.set(row.plan_day_id, list);
+  }
 
   for (const day of planDays) {
-    const { data: rows } = await supabase
-      .from("plan_day_exercises")
-      .select(
-        `
-        id,
-        exercise_id,
-        exercises ( id, slug, name, muscle_group, equipment, category )
-      `
-      )
-      .eq("plan_day_id", day.id)
-      .order("order_index");
-
+    const rows = rowsByDay.get(day.id);
     if (!rows) continue;
 
     const usedOnDay = new Set<string>();
@@ -152,7 +163,6 @@ async function addPreferredCategories(
   rules: RevisionRules,
   revisionNotes: string
 ): Promise<number> {
-  let changes = 0;
   const poolByCategory = new Map<string, Exercise[]>();
 
   for (const category of rules.preferCategories) {
@@ -161,19 +171,41 @@ async function addPreferredCategories(
   }
 
   let poolIndex = 0;
+  const { data: allRows } = await supabase
+    .from("plan_day_exercises")
+    .select(
+      `
+      id,
+      plan_day_id,
+      order_index,
+      exercises ( id, category )
+    `
+    )
+    .in(
+      "plan_day_id",
+      planDays.map((day) => day.id)
+    )
+    .order("order_index");
+
+  const rowsByDay = new Map<string, NonNullable<typeof allRows>>();
+  for (const row of allRows ?? []) {
+    const list = rowsByDay.get(row.plan_day_id) ?? [];
+    list.push(row);
+    rowsByDay.set(row.plan_day_id, list);
+  }
+
+  const inserts: Array<{
+    plan_day_id: string;
+    exercise_id: string;
+    order_index: number;
+    sets: number;
+    reps_min: number;
+    reps_max: number;
+    rest_seconds: number;
+  }> = [];
 
   for (const day of planDays) {
-    const { data: rows } = await supabase
-      .from("plan_day_exercises")
-      .select(
-        `
-        id,
-        order_index,
-        exercises ( id, category )
-      `
-      )
-      .eq("plan_day_id", day.id)
-      .order("order_index");
+    const rows = rowsByDay.get(day.id) ?? [];
 
     const usedOnDay = new Set(
       (rows ?? [])
@@ -208,7 +240,7 @@ async function addPreferredCategories(
         poolIndex += 1;
 
         const rx = defaultPrescription(category as ExerciseCategory);
-        const { error } = await supabase.from("plan_day_exercises").insert({
+        inserts.push({
           plan_day_id: day.id,
           exercise_id: pick.id,
           order_index: nextOrder,
@@ -217,18 +249,18 @@ async function addPreferredCategories(
           reps_max: rx.reps_max,
           rest_seconds: rx.rest_seconds,
         });
-
-        if (!error) {
-          usedOnDay.add(pick.id);
-          countOnDay += 1;
-          nextOrder += 1;
-          changes += 1;
-        }
+        usedOnDay.add(pick.id);
+        countOnDay += 1;
+        nextOrder += 1;
       }
     }
   }
 
-  return changes;
+  if (inserts.length === 0) return 0;
+
+  const { error } = await supabase.from("plan_day_exercises").insert(inserts);
+  if (error) return 0;
+  return inserts.length;
 }
 
 export async function reviseDraftPlanInPlace(

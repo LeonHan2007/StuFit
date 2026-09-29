@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
+import {
+  createClient,
+  getRequestProfile,
+  getRequestUser,
+} from "@/lib/supabase/server";
+import { Page } from "@/components/layout/page";
 import { ProfileForm } from "@/components/account/profile-form";
 import { getStreakStats } from "@/lib/dashboard/stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,18 +14,10 @@ import { Flame, Trophy, ShieldCheck, ListChecks } from "lucide-react";
 
 export default async function AccountPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select(
-      "username, display_name, avatar_url, bio, timezone, is_public, onboarding_completed_at"
-    )
-    .eq("id", user.id)
-    .single();
+  const profile = await getRequestProfile(user.id);
 
   if (!profile?.onboarding_completed_at) redirect("/onboarding");
 
@@ -32,7 +28,7 @@ export default async function AccountPage() {
   );
 
   return (
-    <AppShell title="Account">
+    <Page title="Account">
       <div className="space-y-8">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Card>
@@ -81,6 +77,6 @@ export default async function AccountPage() {
           </Link>
         </div>
       </div>
-    </AppShell>
+    </Page>
   );
 }

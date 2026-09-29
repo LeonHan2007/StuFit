@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import {
+  createClient,
+  getRequestProfile,
+  getRequestUser,
+} from "@/lib/supabase/server";
 import { fetchExerciseCatalog } from "@/lib/exercises/catalog";
 import { getCurrentPlan } from "@/lib/plan/current-plan";
-import { AppShell } from "@/components/layout/app-shell";
+import { Page } from "@/components/layout/page";
 import { PlanReadyToast } from "@/components/plan/plan-ready-toast";
 import { PlanProposalBanner } from "@/components/plan/plan-proposal-banner";
 import { PlanEditor } from "@/components/plan/plan-editor";
@@ -37,22 +41,17 @@ async function loadPlanDays(supabase: Awaited<ReturnType<typeof createClient>>, 
 
 export default async function PlanPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed_at")
-    .eq("id", user.id)
-    .single();
+  const [profile, plan] = await Promise.all([
+    getRequestProfile(user.id),
+    getCurrentPlan(supabase, user.id),
+  ]);
 
   if (!profile?.onboarding_completed_at) {
     redirect("/onboarding");
   }
-
-  const plan = await getCurrentPlan(supabase, user.id);
 
   if (!plan) {
     redirect("/onboarding?retake=1");
@@ -71,7 +70,7 @@ export default async function PlanPage() {
     planDays?.find((d) => d.day_index === todayIndex) ?? planDays?.[0];
 
   return (
-    <AppShell title={isProposal ? "Proposed plan" : plan.name}>
+    <Page title={isProposal ? "Proposed plan" : plan.name}>
       <Suspense fallback={null}>
         <PlanReadyToast />
       </Suspense>
@@ -94,6 +93,6 @@ export default async function PlanPage() {
           </Link>
         )}
       </div>
-    </AppShell>
+    </Page>
   );
 }

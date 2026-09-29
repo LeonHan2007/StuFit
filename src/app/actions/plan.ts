@@ -428,21 +428,27 @@ export async function reorderPlanExercises(
     throw new Error("Invalid exercise order");
   }
 
-  for (const row of rows) {
-    const { error } = await supabase
-      .from("plan_day_exercises")
-      .update({ order_index: row.order_index + 1000 })
-      .eq("id", row.id);
-    if (error) throw new Error(error.message);
-  }
+  const bumped = await Promise.all(
+    rows.map((row) =>
+      supabase
+        .from("plan_day_exercises")
+        .update({ order_index: row.order_index + 1000 })
+        .eq("id", row.id)
+    )
+  );
+  const bumpError = bumped.find((result) => result.error)?.error;
+  if (bumpError) throw new Error(bumpError.message);
 
-  for (let i = 0; i < orderedExerciseIds.length; i++) {
-    const { error } = await supabase
-      .from("plan_day_exercises")
-      .update({ order_index: i })
-      .eq("id", orderedExerciseIds[i]);
-    if (error) throw new Error(error.message);
-  }
+  const placed = await Promise.all(
+    orderedExerciseIds.map((id, index) =>
+      supabase
+        .from("plan_day_exercises")
+        .update({ order_index: index })
+        .eq("id", id)
+    )
+  );
+  const placeError = placed.find((result) => result.error)?.error;
+  if (placeError) throw new Error(placeError.message);
 
   revalidatePath("/plan");
 }

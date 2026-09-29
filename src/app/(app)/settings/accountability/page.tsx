@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
+import {
+  createClient,
+  getRequestProfile,
+  getRequestUser,
+} from "@/lib/supabase/server";
+import { Page } from "@/components/layout/page";
 import { WorkoutLocationsManager } from "@/components/settings/workout-locations";
 import { StreakAccountabilityToggle } from "@/components/settings/streak-accountability-toggle";
 import { CalendarSyncButton } from "@/components/settings/calendar-sync-button";
@@ -17,12 +21,10 @@ export default async function AccountabilityPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: integration }, { data: locations }, { data: profile }] =
+  const [{ data: integration }, { data: locations }, profile] =
     await Promise.all([
       supabase
         .from("user_integrations")
@@ -35,18 +37,14 @@ export default async function AccountabilityPage({
         .select("id, name, latitude, longitude, radius_meters")
         .eq("user_id", user.id)
         .order("created_at"),
-      supabase
-        .from("profiles")
-        .select("streak_accountability_enabled")
-        .eq("id", user.id)
-        .maybeSingle(),
+      getRequestProfile(user.id),
     ]);
 
   const connected = !!integration;
   const accountabilityEnabled = profile?.streak_accountability_enabled !== false;
 
   return (
-    <AppShell title="Accountability">
+    <Page title="Accountability">
       <div className="space-y-4">
         {params.connected && (
           <p className="rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -153,6 +151,6 @@ export default async function AccountabilityPage({
           </CardContent>
         </Card>
       </div>
-    </AppShell>
+    </Page>
   );
 }

@@ -23,20 +23,17 @@ async function loadActivePlanRestWeekdays(
 ): Promise<Set<number>> {
   const { data: plan } = await supabase
     .from("workout_plans")
-    .select("id")
+    .select("id, plan_days ( day_index, is_rest_day )")
     .eq("user_id", userId)
     .eq("is_active", true)
+    .limit(1)
     .maybeSingle();
 
-  if (!plan) return new Set();
-
-  const { data: days } = await supabase
-    .from("plan_days")
-    .select("day_index, is_rest_day")
-    .eq("plan_id", plan.id)
-    .eq("is_rest_day", true);
-
-  return new Set((days ?? []).map((d) => d.day_index));
+  const days = plan?.plan_days;
+  const rows = Array.isArray(days) ? days : days ? [days] : [];
+  return new Set(
+    rows.filter((d) => d.is_rest_day).map((d) => d.day_index)
+  );
 }
 
 async function loadQualifyingWorkoutDates(
@@ -85,8 +82,10 @@ export async function getStreakDays(
   timezone = DEFAULT_TIMEZONE
 ): Promise<Set<string>> {
   const tz = timezone || DEFAULT_TIMEZONE;
-  const workoutDates = await loadQualifyingWorkoutDates(supabase, userId, tz);
-  const restWeekdays = await loadActivePlanRestWeekdays(supabase, userId);
+  const [workoutDates, restWeekdays] = await Promise.all([
+    loadQualifyingWorkoutDates(supabase, userId, tz),
+    loadActivePlanRestWeekdays(supabase, userId),
+  ]);
 
   if (restWeekdays.size === 0) {
     return workoutDates;
@@ -149,6 +148,83 @@ export function getBestStreak(activeDays: Set<string>): number {
   }
 
   return best;
+}
+
+export async function getStreakDaysForUsers(
+  supabase: SupabaseClient,
+  userIds: string[],
+  timezoneByUserId: Map<string, string>
+): Promise<Map<string, Set<string>>> {
+  const uniqueIds = [...new Set(userIds)];
+  const result = new Map<string, Set<string>>();
+  if (uniqueIds.length === 0) return result;
+
+  const [{ data: sessions }, { data: plans }] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("user_id, ended_at, started_at")
+      .in("user_id", uniqueIds)
+      .eq("status", "completed")
+      .eq("qualifies_for_streak", true),
+    supabase
+      .from("workout_plans")
+      .select("id, user_id")
+      .in("user_id", uniqueIds)
+      .eq("is_active", true),
+  ]);
+
+  const planIds = (plans ?? []).map((plan) => plan.id);
+  const { data: restDays } = planIds.length
+    ? await supabase
+        .from("plan_days")
+        .select("plan_id, day_index")
+        .in("plan_id", planIds)
+        .eq("is_rest_day", true)
+    : { data: [] as Array<{ plan_id: string; day_index: number }> };
+
+  const restByPlan = new Map<string, Set<number>>();
+  for (const day of restDays ?? []) {
+    const set = restByPlan.get(day.plan_id) ?? new Set<number>();
+    set.add(day.day_index);
+    restByPlan.set(day.plan_id, set);
+  }
+
+  const restByUser = new Map<string, Set<number>>();
+  for (const plan of plans ?? []) {
+    const days = restByPlan.get(plan.id);
+    if (!days) continue;
+    const existing = restByUser.get(plan.user_id) ?? new Set<number>();
+    for (const day of days) existing.add(day);
+    restByUser.set(plan.user_id, existing);
+  }
+
+  const workoutsByUser = new Map<string, Set<string>>();
+  for (const id of uniqueIds) workoutsByUser.set(id, new Set());
+  for (const session of sessions ?? []) {
+    const raw = session.ended_at ?? session.started_at;
+    if (!raw || !session.user_id) continue;
+    const tz = timezoneByUserId.get(session.user_id) ?? DEFAULT_TIMEZONE;
+    workoutsByUser.get(session.user_id)?.add(localDateKey(parseISO(raw), tz));
+  }
+
+  for (const id of uniqueIds) {
+    const tz = timezoneByUserId.get(id) ?? DEFAULT_TIMEZONE;
+    const workoutDates = workoutsByUser.get(id) ?? new Set<string>();
+    const restWeekdays = restByUser.get(id) ?? new Set<number>();
+    if (restWeekdays.size === 0) {
+      result.set(id, workoutDates);
+      continue;
+    }
+    const now = new Date();
+    const earliestWorkout = [...workoutDates].sort()[0];
+    const rangeStart = earliestWorkout
+      ? parseLocalDate(earliestWorkout)
+      : subDays(now, 400);
+    const restDates = restDatesInRange(restWeekdays, tz, rangeStart, now);
+    result.set(id, new Set([...workoutDates, ...restDates]));
+  }
+
+  return result;
 }
 
 export async function isStreakEligibleToday(

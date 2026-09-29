@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
+import {
+  createClient,
+  getRequestProfile,
+  getRequestUser,
+} from "@/lib/supabase/server";
+import { Page } from "@/components/layout/page";
 import { UserSearch } from "@/components/social/user-search";
 import { FriendRequestList } from "@/components/social/friend-request-list";
 import { FriendsList } from "@/components/social/friends-list";
@@ -10,23 +14,18 @@ import type { FriendListItem } from "@/components/social/friends-list";
 
 export default async function SocialPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("onboarding_completed_at, timezone")
-    .eq("id", user.id)
-    .single();
+  const [profile, { data: friendships }] = await Promise.all([
+    getRequestProfile(user.id),
+    supabase
+      .from("friendships")
+      .select("id, requester_id, addressee_id, status")
+      .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+  ]);
 
   if (!profile?.onboarding_completed_at) redirect("/onboarding");
-
-  const { data: friendships } = await supabase
-    .from("friendships")
-    .select("id, requester_id, addressee_id, status")
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 
   const rows = friendships ?? [];
   const pending = rows.filter((f) => f.status === "pending");
@@ -43,7 +42,7 @@ export default async function SocialPage() {
   const { data: profiles } = otherIds.length
     ? await supabase
         .from("profiles")
-        .select("id, username, display_name, avatar_url")
+        .select("id, username, display_name, avatar_url, timezone")
         .in("id", otherIds)
     : { data: [] };
 
@@ -75,12 +74,21 @@ export default async function SocialPage() {
       };
     });
 
-  const streaks = await getFriendStreaksForUser(
-    supabase,
-    user.id,
-    accepted,
-    profile.timezone ?? "UTC"
-  );
+  const timezoneByUserId = new Map<string, string>([
+    [user.id, profile.timezone ?? "UTC"],
+  ]);
+  for (const p of profiles ?? []) {
+    timezoneByUserId.set(p.id, p.timezone ?? "UTC");
+  }
+
+  const streaks = accepted.length
+    ? await getFriendStreaksForUser(
+        supabase,
+        user.id,
+        accepted,
+        timezoneByUserId
+      )
+    : [];
   const streakMap = new Map(streaks.map((s) => [s.friendId, s]));
 
   const friends: FriendListItem[] = accepted.map((f) => {
@@ -100,7 +108,7 @@ export default async function SocialPage() {
   });
 
   return (
-    <AppShell title="Social">
+    <Page title="Social">
       <div className="space-y-10">
         <section className="space-y-4">
           <h2 className="text-lg font-semibold">Find friends</h2>
@@ -117,6 +125,6 @@ export default async function SocialPage() {
           <FriendsList friends={friends} />
         </section>
       </div>
-    </AppShell>
+    </Page>
   );
 }

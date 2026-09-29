@@ -31,20 +31,21 @@ export async function getWeeklySessionCount(
     "yyyy-MM-dd"
   );
 
-  const { count } = await supabase
-    .from("workout_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("status", "completed")
-    .gte("ended_at", weekStart);
-
-  const { data: onboarding } = await supabase
-    .from("user_onboarding")
-    .select("days_per_week")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+  const [{ count }, { data: onboarding }] = await Promise.all([
+    supabase
+      .from("workout_sessions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .gte("ended_at", weekStart),
+    supabase
+      .from("user_onboarding")
+      .select("days_per_week")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   return {
     completed: count ?? 0,

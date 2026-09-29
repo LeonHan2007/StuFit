@@ -164,39 +164,44 @@ export async function replaceDraftPlanContent(
     return { ok: false, error: nameError.message };
   }
 
-  for (const day of built.days) {
-    const { data: planDay, error: dayError } = await supabase
-      .from("plan_days")
-      .insert({
+  const { data: planDays, error: dayError } = await supabase
+    .from("plan_days")
+    .insert(
+      built.days.map((day) => ({
         plan_id: planId,
         day_index: day.dayIndex,
         label: day.label,
         is_rest_day: day.isRestDay,
-      })
-      .select("id")
-      .single();
+      }))
+    )
+    .select("id, day_index");
 
-    if (dayError || !planDay) {
-      return {
-        ok: false,
-        error:
-          "Failed while saving the new plan. Some days may be missing — try regenerating again.",
-      };
-    }
+  if (dayError || !planDays?.length) {
+    return {
+      ok: false,
+      error:
+        dayError?.message ??
+        "Failed while saving the new plan. Some days may be missing — try regenerating again.",
+    };
+  }
 
-    if (day.rows.length > 0) {
-      const rows = day.rows.map((row) => ({
-        plan_day_id: planDay.id,
-        ...row,
-      }));
+  const idByIndex = new Map(planDays.map((day) => [day.day_index, day.id]));
+  const rows = built.days.flatMap((day) => {
+    const planDayId = idByIndex.get(day.dayIndex);
+    if (!planDayId) return [];
+    return day.rows.map((row) => ({
+      plan_day_id: planDayId,
+      ...row,
+    }));
+  });
 
-      const { error: insertError } = await supabase
-        .from("plan_day_exercises")
-        .insert(rows);
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase
+      .from("plan_day_exercises")
+      .insert(rows);
 
-      if (insertError) {
-        return { ok: false, error: insertError.message };
-      }
+    if (insertError) {
+      return { ok: false, error: insertError.message };
     }
   }
 

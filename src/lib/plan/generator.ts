@@ -113,35 +113,41 @@ async function insertPlanDays(
   }>,
   exerciseMap: Map<string, ExerciseRow>
 ): Promise<void> {
-  for (const day of days) {
-    const { data: planDay, error: dayError } = await supabase
-      .from("plan_days")
-      .insert({
+  if (days.length === 0) return;
+
+  const { data: planDays, error: dayError } = await supabase
+    .from("plan_days")
+    .insert(
+      days.map((day) => ({
         plan_id: planId,
         day_index: day.dayIndex,
         label: day.label,
         is_rest_day: day.isRestDay,
-      })
-      .select("id")
-      .single();
+      }))
+    )
+    .select("id, day_index");
 
-    if (dayError || !planDay) continue;
+  if (dayError || !planDays?.length) return;
 
-    const rows: Array<{
-      plan_day_id: string;
-      exercise_id: string;
-      order_index: number;
-      sets: number;
-      reps_min: number;
-      reps_max: number;
-      rest_seconds: number;
-    }> = [];
+  const idByIndex = new Map(planDays.map((day) => [day.day_index, day.id]));
+  const rows: Array<{
+    plan_day_id: string;
+    exercise_id: string;
+    order_index: number;
+    sets: number;
+    reps_min: number;
+    reps_max: number;
+    rest_seconds: number;
+  }> = [];
 
+  for (const day of days) {
+    const planDayId = idByIndex.get(day.dayIndex);
+    if (!planDayId) continue;
     day.exercises.forEach((slot, index) => {
       const ex = exerciseMap.get(slot.slug);
       if (!ex) return;
       rows.push({
-        plan_day_id: planDay.id,
+        plan_day_id: planDayId,
         exercise_id: ex.id,
         order_index: index,
         sets: slot.sets,
@@ -150,10 +156,10 @@ async function insertPlanDays(
         rest_seconds: slot.restSeconds,
       });
     });
+  }
 
-    if (rows.length > 0) {
-      await supabase.from("plan_day_exercises").insert(rows);
-    }
+  if (rows.length > 0) {
+    await supabase.from("plan_day_exercises").insert(rows);
   }
 }
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { format, parseISO, differenceInMinutes } from "date-fns";
-import { createClient } from "@/lib/supabase/server";
-import { AppShell } from "@/components/layout/app-shell";
+import { createClient, getRequestUser } from "@/lib/supabase/server";
+import { Page } from "@/components/layout/page";
 import {
   WorkoutHistoryList,
   type HistorySession,
@@ -10,9 +10,7 @@ import { getPlanDayLabel } from "@/lib/utils/plan-day";
 
 export default async function WorkoutHistoryPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
   const { data: sessions } = await supabase
@@ -86,8 +84,8 @@ export default async function WorkoutHistoryPage() {
   });
 
   return (
-    <AppShell title="Workout history">
+    <Page title="Workout history">
       <WorkoutHistoryList sessions={history} />
-    </AppShell>
+    </Page>
   );
 }

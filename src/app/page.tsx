@@ -7,7 +7,7 @@ import {
   LineChart,
   Zap,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { getRequestProfile, getRequestUser } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -19,17 +19,10 @@ import {
 } from "@/components/ui/card";
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
 
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("onboarding_completed_at")
-      .eq("id", user.id)
-      .single();
+    const profile = await getRequestProfile(user.id);
 
     if (!profile?.onboarding_completed_at) {
       redirect("/onboarding");

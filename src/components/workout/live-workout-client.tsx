@@ -28,6 +28,7 @@ export interface SessionExerciseRow {
 export function LiveWorkoutClient({
   sessionId,
   exercises: initialExercises,
+  initialSets,
   exerciseCatalog,
   hasWorkoutLocations,
   isPlannedWorkout,
@@ -35,6 +36,7 @@ export function LiveWorkoutClient({
 }: {
   sessionId: string;
   exercises: SessionExerciseRow[];
+  initialSets: Record<string, SessionSet[]>;
   exerciseCatalog: Exercise[];
   hasWorkoutLocations: boolean;
   isPlannedWorkout: boolean;
@@ -44,9 +46,8 @@ export function LiveWorkoutClient({
   const supabase = createClient();
   const [exercises, setExercises] = useState(initialExercises);
   const [exerciseIndex, setExerciseIndex] = useState(0);
-  const [setsByExercise, setSetsByExercise] = useState<Record<string, SessionSet[]>>(
-    {}
-  );
+  const [setsByExercise, setSetsByExercise] =
+    useState<Record<string, SessionSet[]>>(initialSets);
   const [endDialogOpen, setEndDialogOpen] = useState(false);
   const [ending, setEnding] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -80,8 +81,10 @@ export function LiveWorkoutClient({
   );
 
   useEffect(() => {
-    if (current) loadSets(current.id);
-  }, [current?.id, loadSets]);
+    if (current && !(current.id in setsByExercise)) {
+      loadSets(current.id);
+    }
+  }, [current, loadSets, setsByExercise]);
 
   async function addExerciseToSession(exercise: Exercise) {
     setAdding(true);

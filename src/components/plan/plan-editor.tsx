@@ -8,6 +8,7 @@ import { addPlanDay } from "@/app/actions/plan";
 import { startWorkout } from "@/app/actions/workout";
 import { PlanDayEditPanel } from "@/components/plan/plan-day-edit-panel";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -100,9 +101,9 @@ export function PlanEditor({
           </CardHeader>
           <CardContent>
             <form action={startWorkout.bind(null, todayDay.id)}>
-              <Button type="submit" size="lg" className="h-14 w-full text-lg">
+              <SubmitButton size="lg" className="h-14 w-full text-lg">
                 Start Today&apos;s Workout
-              </Button>
+              </SubmitButton>
             </form>
           </CardContent>
         </Card>
@@ -176,13 +177,12 @@ export function PlanEditor({
                             action={startWorkout.bind(null, day.id)}
                             className="min-w-0 flex-1 sm:flex-initial"
                           >
-                            <Button
-                              type="submit"
+                            <SubmitButton
                               variant="outline"
                               className="h-11 w-full sm:w-auto"
                             >
                               Start
-                            </Button>
+                            </SubmitButton>
                           </form>
                         )}
 

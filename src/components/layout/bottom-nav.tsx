@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Dumbbell,
@@ -21,6 +22,38 @@ const sideNavItems = [
     { href: "/social", label: "Social", icon: Users },
   ],
 ] as const;
+
+function WorkoutNavIcon({ active }: { active: boolean }) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <Dumbbell
+      className={cn("h-7 w-7 text-white", pending && !active && "opacity-70")}
+      strokeWidth={2.25}
+    />
+  );
+}
+
+function NavPending({
+  active,
+  children,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+}) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <span
+      className={cn(
+        "flex flex-col items-center gap-1",
+        pending && !active && "text-primary"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -43,8 +76,10 @@ export function BottomNav() {
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="max-[360px]:sr-only">{label}</span>
+              <NavPending active={active}>
+                <Icon className="h-5 w-5" />
+                <span className="max-[360px]:sr-only">{label}</span>
+              </NavPending>
             </Link>
           );
         })}
@@ -59,7 +94,7 @@ export function BottomNav() {
               : "bg-primary hover:bg-primary/90"
           )}
         >
-          <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.25} />
+          <WorkoutNavIcon active={workoutActive} />
         </Link>
 
         {sideNavItems[1].map(({ href, label, icon: Icon }) => {
@@ -75,8 +110,10 @@ export function BottomNav() {
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon className="h-5 w-5" />
-              <span className="max-[360px]:sr-only">{label}</span>
+              <NavPending active={active}>
+                <Icon className="h-5 w-5" />
+                <span className="max-[360px]:sr-only">{label}</span>
+              </NavPending>
             </Link>
           );
         })}
