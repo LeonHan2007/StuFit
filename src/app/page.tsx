@@ -66,7 +66,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/40">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6">
-        <span className="bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text text-2xl font-bold text-transparent">
+        <span className="bg-gradient-to-r from-primary to-[oklch(0.66_0.2_291)] bg-clip-text text-2xl font-bold text-transparent">
           StuFit
         </span>
         <div className="flex flex-col gap-2 sm:flex-row">

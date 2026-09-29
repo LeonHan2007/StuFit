@@ -29,6 +29,7 @@ export interface Profile {
   bio: string | null;
   timezone: string | null;
   onboarding_completed_at: string | null;
+  streak_accountability_enabled?: boolean;
 }
 
 export interface Friendship {

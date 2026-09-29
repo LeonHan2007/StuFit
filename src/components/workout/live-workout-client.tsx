@@ -31,12 +31,14 @@ export function LiveWorkoutClient({
   exerciseCatalog,
   hasWorkoutLocations,
   isPlannedWorkout,
+  accountabilityEnabled,
 }: {
   sessionId: string;
   exercises: SessionExerciseRow[];
   exerciseCatalog: Exercise[];
   hasWorkoutLocations: boolean;
   isPlannedWorkout: boolean;
+  accountabilityEnabled: boolean;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -49,7 +51,8 @@ export function LiveWorkoutClient({
   const [ending, setEnding] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  const trackLocation = hasWorkoutLocations && isPlannedWorkout;
+  const showLocationStatus = accountabilityEnabled && isPlannedWorkout;
+  const trackLocation = showLocationStatus && hasWorkoutLocations;
   const { status: locationStatus, checkLocation } = useSessionLocationTracking(
     sessionId,
     trackLocation
@@ -238,7 +241,7 @@ export function LiveWorkoutClient({
     return (
       <div className="min-w-0 space-y-6 overflow-x-hidden text-center">
         {endWorkoutDialog}
-        {isPlannedWorkout && (
+        {showLocationStatus && (
           <LocationStatus status={locationStatus} hasLocations={hasWorkoutLocations} />
         )}
         <p className="text-muted-foreground">
@@ -266,7 +269,7 @@ export function LiveWorkoutClient({
   return (
     <div className="min-w-0 space-y-4 overflow-x-hidden">
       {endWorkoutDialog}
-      {isPlannedWorkout && (
+      {showLocationStatus && (
         <LocationStatus status={locationStatus} hasLocations={hasWorkoutLocations} />
       )}
       <SessionProgress

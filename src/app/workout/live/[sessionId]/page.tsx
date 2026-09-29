@@ -72,13 +72,19 @@ export default async function LiveWorkoutPage({
     };
   });
 
-  const [exerciseCatalog, { count: locationCount }] = await Promise.all([
-    fetchExerciseCatalog(supabase),
-    supabase
-      .from("workout_locations")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id),
-  ]);
+  const [exerciseCatalog, { count: locationCount }, { data: profile }] =
+    await Promise.all([
+      fetchExerciseCatalog(supabase),
+      supabase
+        .from("workout_locations")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id),
+      supabase
+        .from("profiles")
+        .select("streak_accountability_enabled")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
 
   return (
     <AppShell title="Live workout">
@@ -88,6 +94,7 @@ export default async function LiveWorkoutPage({
         exerciseCatalog={exerciseCatalog ?? []}
         hasWorkoutLocations={(locationCount ?? 0) > 0}
         isPlannedWorkout={!!session.plan_day_id}
+        accountabilityEnabled={profile?.streak_accountability_enabled !== false}
       />
     </AppShell>
   );

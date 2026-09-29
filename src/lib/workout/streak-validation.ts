@@ -31,6 +31,7 @@ export interface StreakValidationInput {
   sessionExercises: SessionExerciseProgress[];
   locationSamples: LocationSample[];
   workoutLocations: GeoPoint[];
+  requireLocationAccountability: boolean;
 }
 
 export interface StreakValidationResult {
@@ -75,24 +76,26 @@ export function validateStreakQualification(
     );
   }
 
-  if (input.workoutLocations.length === 0) {
-    reasons.push("Add at least one workout location in Accountability settings");
-  } else if (input.locationSamples.length === 0) {
-    reasons.push("No location check-ins recorded during workout");
-  } else {
-    const invalidSample = input.locationSamples.find((s) => !s.within_bounds);
-    if (invalidSample) {
-      reasons.push("Left an approved workout location during the session");
-    }
+  if (input.requireLocationAccountability) {
+    if (input.workoutLocations.length === 0) {
+      reasons.push("Add at least one workout location in Accountability settings");
+    } else if (input.locationSamples.length === 0) {
+      reasons.push("No location check-ins recorded during workout");
+    } else {
+      const invalidSample = input.locationSamples.find((s) => !s.within_bounds);
+      if (invalidSample) {
+        reasons.push("Left an approved workout location during the session");
+      }
 
-    const minSamples = Math.max(
-      1,
-      Math.floor(durationSeconds / LOCATION_SAMPLE_INTERVAL_SECONDS)
-    );
-    if (input.locationSamples.length < minSamples) {
-      reasons.push(
-        `Not enough location check-ins (${input.locationSamples.length}/${minSamples})`
+      const minSamples = Math.max(
+        1,
+        Math.floor(durationSeconds / LOCATION_SAMPLE_INTERVAL_SECONDS)
       );
+      if (input.locationSamples.length < minSamples) {
+        reasons.push(
+          `Not enough location check-ins (${input.locationSamples.length}/${minSamples})`
+        );
+      }
     }
   }
 

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { WorkoutLocationsManager } from "@/components/settings/workout-locations";
+import { StreakAccountabilityToggle } from "@/components/settings/streak-accountability-toggle";
 import { CalendarSyncButton } from "@/components/settings/calendar-sync-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
@@ -21,21 +22,28 @@ export default async function AccountabilityPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/login");
 
-  const [{ data: integration }, { data: locations }] = await Promise.all([
-    supabase
-      .from("user_integrations")
-      .select("id, provider, calendar_id, updated_at")
-      .eq("user_id", user.id)
-      .eq("provider", "google_calendar")
-      .maybeSingle(),
-    supabase
-      .from("workout_locations")
-      .select("id, name, latitude, longitude, radius_meters")
-      .eq("user_id", user.id)
-      .order("created_at"),
-  ]);
+  const [{ data: integration }, { data: locations }, { data: profile }] =
+    await Promise.all([
+      supabase
+        .from("user_integrations")
+        .select("id, provider, calendar_id, updated_at")
+        .eq("user_id", user.id)
+        .eq("provider", "google_calendar")
+        .maybeSingle(),
+      supabase
+        .from("workout_locations")
+        .select("id, name, latitude, longitude, radius_meters")
+        .eq("user_id", user.id)
+        .order("created_at"),
+      supabase
+        .from("profiles")
+        .select("streak_accountability_enabled")
+        .eq("id", user.id)
+        .maybeSingle(),
+    ]);
 
   const connected = !!integration;
+  const accountabilityEnabled = profile?.streak_accountability_enabled !== false;
 
   return (
     <AppShell title="Accountability">
@@ -53,14 +61,28 @@ export default async function AccountabilityPage({
 
         <Card>
           <CardHeader>
+            <CardTitle>Streak accountability</CardTitle>
+            <CardDescription>
+              Choose whether location check-ins are required for streak credit.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StreakAccountabilityToggle enabled={accountabilityEnabled} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Workout locations</CardTitle>
             <CardDescription>
-              Define where you are allowed to train. Your phone checks in
-              periodically during live workouts.
+              {accountabilityEnabled
+                ? "Define where you are allowed to train. Your phone checks in periodically during live workouts."
+                : "Optional while accountability is off. Turn it on to require these locations for streak credit."}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <WorkoutLocationsManager
+              accountabilityEnabled={accountabilityEnabled}
               locations={(locations ?? []).map((l) => ({
                 id: l.id,
                 name: l.name,
@@ -124,7 +146,9 @@ export default async function AccountabilityPage({
               <li>Training days: start from your plan and complete every exercise</li>
               <li>Log at least the target sets for each planned exercise</li>
               <li>Spend a reasonable amount of time for that day&apos;s workout</li>
-              <li>Remain inside an approved location for the entire workout</li>
+              {accountabilityEnabled && (
+                <li>Remain inside an approved location for the entire workout</li>
+              )}
             </ul>
           </CardContent>
         </Card>

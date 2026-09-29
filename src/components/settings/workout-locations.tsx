@@ -34,8 +34,10 @@ function readCoords(position: GeolocationPosition) {
 
 export function WorkoutLocationsManager({
   locations,
+  accountabilityEnabled,
 }: {
   locations: WorkoutLocationRow[];
+  accountabilityEnabled: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -117,9 +119,9 @@ export function WorkoutLocationsManager({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Streaks only count when you finish a planned workout, spend a reasonable
-        amount of time training, and stay inside an approved location for the
-        full session.
+        {accountabilityEnabled
+          ? "Streaks only count when you finish a planned workout, spend a reasonable amount of time training, and stay inside an approved location for the full session."
+          : "These places are saved for when streak accountability is on. Location is not checked while that setting is off."}
       </p>
 
       {locations.length > 0 ? (

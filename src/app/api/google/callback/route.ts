@@ -1,16 +1,29 @@
 import { NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createOAuth2Client } from "@/lib/calendar/google";
+import { readOAuthState } from "@/lib/calendar/oauth-state";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const userId = searchParams.get("state");
+  const state = searchParams.get("state");
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-  if (!code || !userId) {
+  if (!code || !state) {
     return NextResponse.redirect(
       `${baseUrl}/settings/accountability?error=missing_params`
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const claimed = readOAuthState(state);
+
+  if (!user || !claimed || claimed.uid !== user.id) {
+    return NextResponse.redirect(
+      `${baseUrl}/settings/accountability?error=state_mismatch`
     );
   }
 
@@ -24,10 +37,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const supabase = await createServiceClient();
-    const { error } = await supabase.from("user_integrations").upsert(
+    const admin = await createServiceClient();
+    const { error } = await admin.from("user_integrations").upsert(
       {
-        user_id: userId,
+        user_id: user.id,
         provider: "google_calendar",
         refresh_token: tokens.refresh_token,
         calendar_id: "primary",

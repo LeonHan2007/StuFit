@@ -146,30 +146,40 @@ export async function completeWorkout(sessionId: string) {
 
   const endedAt = new Date().toISOString();
 
-  const [{ data: planExercises }, { data: sessionExercises }, { data: locations }, { data: samples }] =
-    await Promise.all([
-      session.plan_day_id
-        ? supabase
-            .from("plan_day_exercises")
-            .select("exercise_id, sets, rest_seconds")
-            .eq("plan_day_id", session.plan_day_id)
-        : Promise.resolve({
-            data: [] as { exercise_id: string; sets: number; rest_seconds: number }[],
-          }),
-      supabase
-        .from("session_exercises")
-        .select("id, exercise_id, session_sets ( id )")
-        .eq("session_id", sessionId),
-      supabase
-        .from("workout_locations")
-        .select("latitude, longitude, radius_meters")
-        .eq("user_id", user.id),
-      supabase
-        .from("session_location_samples")
-        .select("within_bounds, recorded_at")
-        .eq("session_id", sessionId)
-        .order("recorded_at"),
-    ]);
+  const [
+    { data: planExercises },
+    { data: sessionExercises },
+    { data: locations },
+    { data: samples },
+    { data: profile },
+  ] = await Promise.all([
+    session.plan_day_id
+      ? supabase
+          .from("plan_day_exercises")
+          .select("exercise_id, sets, rest_seconds")
+          .eq("plan_day_id", session.plan_day_id)
+      : Promise.resolve({
+          data: [] as { exercise_id: string; sets: number; rest_seconds: number }[],
+        }),
+    supabase
+      .from("session_exercises")
+      .select("id, exercise_id, session_sets ( id )")
+      .eq("session_id", sessionId),
+    supabase
+      .from("workout_locations")
+      .select("latitude, longitude, radius_meters")
+      .eq("user_id", user.id),
+    supabase
+      .from("session_location_samples")
+      .select("within_bounds, recorded_at")
+      .eq("session_id", sessionId)
+      .order("recorded_at"),
+    supabase
+      .from("profiles")
+      .select("streak_accountability_enabled")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
 
   const sessionProgress = (sessionExercises ?? []).map((se) => ({
     exercise_id: se.exercise_id,
@@ -192,6 +202,7 @@ export async function completeWorkout(sessionId: string) {
       longitude: Number(l.longitude),
       radius_meters: l.radius_meters,
     })),
+    requireLocationAccountability: profile?.streak_accountability_enabled !== false,
   });
 
   const { error } = await supabase

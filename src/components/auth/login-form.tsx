@@ -61,7 +61,7 @@ export function LoginForm() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4">
       <Link
         href="/"
-        className="mb-8 bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text text-2xl font-bold text-transparent"
+        className="mb-8 bg-gradient-to-r from-primary to-[oklch(0.66_0.2_291)] bg-clip-text text-2xl font-bold text-transparent"
       >
         StuFit
       </Link>

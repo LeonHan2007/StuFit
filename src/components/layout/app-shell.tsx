@@ -36,7 +36,7 @@ export async function AppShell({
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <Link
             href="/dashboard"
-            className="bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text text-2xl font-bold tracking-tight text-transparent"
+            className="bg-gradient-to-r from-primary to-[oklch(0.66_0.2_291)] bg-clip-text text-2xl font-bold tracking-tight text-transparent"
           >
             StuFit
           </Link>

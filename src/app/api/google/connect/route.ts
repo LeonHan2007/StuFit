@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOAuth2Client, CALENDAR_SCOPES } from "@/lib/calendar/google";
+import { createOAuthState } from "@/lib/calendar/oauth-state";
 
 export async function GET() {
   const supabase = await createClient();
@@ -19,7 +20,7 @@ export async function GET() {
     access_type: "offline",
     prompt: "consent",
     scope: CALENDAR_SCOPES,
-    state: user.id,
+    state: createOAuthState(user.id),
   });
 
   return NextResponse.redirect(url);

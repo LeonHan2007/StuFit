@@ -34,6 +34,7 @@ insert into public.exercises (slug, name, muscle_group, equipment, category, dif
 ('cable-crunch', 'Cable Crunch', 'core', 'cable', 'weightlifting', 'beginner', E'## Technique\n- Hips fixed, round upper back\n- Pull rope toward thighs\n- Feel abs, not hip flexors', null),
 ('russian-twist', 'Russian Twist', 'core', 'bodyweight', 'weightlifting', 'beginner', E'## Technique\n- Lean back slightly, feet optional anchor\n- Rotate through thoracic spine\n- Add weight when form is solid', null),
 ('barbell-curl', 'Barbell Curl', 'arms', 'barbell', 'weightlifting', 'beginner', E'## Technique\n- Elbows at sides, no swing\n- Full supination at top\n- Lower under control', null),
+('dumbbell-curl', 'Dumbbell Curl', 'arms', 'dumbbell', 'weightlifting', 'beginner', E'## Technique\n- Elbows at sides, palms facing forward\n- Curl without swinging the torso\n- Squeeze at the top, then lower under control', null),
 ('hammer-curl', 'Hammer Curl', 'arms', 'dumbbell', 'weightlifting', 'beginner', E'## Technique\n- Neutral grip throughout\n- Alternating or simultaneous\n- Avoid rocking torso', null),
 ('chin-up', 'Chin-Up', 'back', 'bodyweight', 'calisthenics', 'intermediate', E'## Technique\n- Supinated grip, shoulder-width\n- Pull chest to bar\n- Great bicep and lat builder', null),
 ('inverted-row', 'Inverted Row', 'back', 'bodyweight', 'calisthenics', 'beginner', E'## Technique\n- Body straight under bar\n- Pull chest to bar\n- Scale angle for difficulty', null),

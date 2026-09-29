@@ -55,8 +55,8 @@ export function BottomNav() {
           className={cn(
             "relative -mt-7 flex h-16 w-16 shrink-0 items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95",
             workoutActive
-              ? "bg-violet-500 ring-4 ring-violet-500/30"
-              : "bg-violet-600 hover:bg-violet-500"
+              ? "bg-primary ring-4 ring-primary/30"
+              : "bg-primary hover:bg-primary/90"
           )}
         >
           <Dumbbell className="h-7 w-7 text-white" strokeWidth={2.25} />
