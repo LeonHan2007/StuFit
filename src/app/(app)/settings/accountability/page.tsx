@@ -37,7 +37,7 @@ export default async function AccountabilityPage({
         .select("id, name, latitude, longitude, radius_meters")
         .eq("user_id", user.id)
         .order("created_at"),
-      getRequestProfile(user.id),
+      getRequestProfile(),
     ]);
 
   const connected = !!integration;

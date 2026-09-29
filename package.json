@@ -10,7 +10,8 @@
     "supabase": "supabase",
     "db:start": "supabase start",
     "db:reset": "supabase db reset",
-    "db:status": "supabase status"
+    "db:status": "supabase status",
+    "seed:dev-user": "node --env-file=.env.local scripts/seed-dev-user.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

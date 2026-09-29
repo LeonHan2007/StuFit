@@ -1,5 +1,11 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { getRequestUser } from "@/lib/supabase/server";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  await getRequestUser();
   return <AppShell>{children}</AppShell>;
 }

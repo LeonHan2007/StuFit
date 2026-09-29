@@ -22,7 +22,7 @@ export default async function HomePage() {
   const user = await getRequestUser();
 
   if (user) {
-    const profile = await getRequestProfile(user.id);
+    const profile = await getRequestProfile();
 
     if (!profile?.onboarding_completed_at) {
       redirect("/onboarding");

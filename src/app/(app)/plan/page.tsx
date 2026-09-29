@@ -45,7 +45,7 @@ export default async function PlanPage() {
   if (!user) redirect("/auth/login");
 
   const [profile, plan] = await Promise.all([
-    getRequestProfile(user.id),
+    getRequestProfile(),
     getCurrentPlan(supabase, user.id),
   ]);
 

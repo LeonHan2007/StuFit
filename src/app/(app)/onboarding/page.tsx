@@ -14,7 +14,7 @@ export default async function OnboardingPage({
   const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const profile = await getRequestProfile(user.id);
+  const profile = await getRequestProfile();
 
   if (profile?.onboarding_completed_at && !isRetake) {
     redirect("/dashboard");

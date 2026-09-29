@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
+import { connection } from "next/server";
 import { cookies } from "next/headers";
 import type { Profile } from "@/types/database";
 
@@ -32,6 +33,7 @@ export const createClient = cache(async function createClient() {
 });
 
 export const getRequestUser = cache(async function getRequestUser() {
+  await connection();
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,14 +41,15 @@ export const getRequestUser = cache(async function getRequestUser() {
   return user;
 });
 
-export const getRequestProfile = cache(async function getRequestProfile(
-  userId: string
-): Promise<Profile | null> {
+export const getRequestProfile = cache(async function getRequestProfile(): Promise<Profile | null> {
+  const user = await getRequestUser();
+  if (!user) return null;
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
     .select(PROFILE_COLUMNS)
-    .eq("id", userId)
+    .eq("id", user.id)
     .maybeSingle();
   return data as Profile | null;
 });

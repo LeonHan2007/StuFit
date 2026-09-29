@@ -35,7 +35,7 @@ export default async function LiveWorkoutPage({
       .from("workout_locations")
       .select("*", { count: "exact", head: true })
       .eq("user_id", user.id),
-    getRequestProfile(user.id),
+    getRequestProfile(),
   ]);
 
   if (!session || session.user_id !== user.id) notFound();

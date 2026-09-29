@@ -18,7 +18,7 @@ export default async function SocialPage() {
   if (!user) redirect("/auth/login");
 
   const [profile, { data: friendships }] = await Promise.all([
-    getRequestProfile(user.id),
+    getRequestProfile(),
     supabase
       .from("friendships")
       .select("id, requester_id, addressee_id, status")

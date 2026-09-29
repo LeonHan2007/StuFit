@@ -40,6 +40,11 @@ yarn-error.log*
 .env.production.local
 .env.keys
 
+# Local dev sign-in bypass (not for the repo)
+scripts/seed-dev-user.mjs
+src/app/auth/dev-login/
+src/lib/auth/dev-credentials.ts
+
 # vercel
 .vercel
 

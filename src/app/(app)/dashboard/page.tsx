@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const user = await getRequestUser();
   if (!user) redirect("/auth/login");
 
-  const profile = await getRequestProfile(user.id);
+  const profile = await getRequestProfile();
 
   if (!profile?.onboarding_completed_at) redirect("/onboarding");
 

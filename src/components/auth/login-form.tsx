@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,6 +25,17 @@ export function LoginForm() {
   const [sent, setSent] = useState(false);
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/dashboard";
+  const isDev = process.env.NODE_ENV === "development";
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "auth") {
+      toast.error("Sign-in failed. Check redirect URLs and auth provider config.");
+    }
+    if (error === "dev") {
+      toast.error("Dev sign-in failed. Run npm run seed:dev-user and restart Supabase.");
+    }
+  }, [searchParams]);
 
   async function signInWithGoogle() {
     setLoading(true);
@@ -54,7 +66,11 @@ export function LoginForm() {
       return;
     }
     setSent(true);
-    toast.success("Check your email for the magic link!");
+    toast.success(
+      isDev
+        ? "Magic link sent — open Inbucket at http://127.0.0.1:54324"
+        : "Check your email for the magic link!"
+    );
   }
 
   return (
@@ -142,6 +158,38 @@ export function LoginForm() {
                 Send magic link
               </Button>
             </form>
+          )}
+
+          {isDev && (
+            <>
+              <div className="relative">
+                <Separator />
+                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
+                  local only
+                </span>
+              </div>
+              <Link
+                href={`/auth/dev-login?redirect=${encodeURIComponent(redirect)}`}
+                className={cn(
+                  buttonVariants({ variant: "secondary" }),
+                  "h-12 w-full text-base"
+                )}
+              >
+                Continue as dev user
+              </Link>
+              <p className="text-center text-xs text-muted-foreground">
+                Magic links are in{" "}
+                <a
+                  href="http://127.0.0.1:54324"
+                  className="text-primary underline-offset-2 hover:underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Inbucket
+                </a>
+                . Google needs Supabase Auth credentials in config.toml.
+              </p>
+            </>
           )}
         </CardContent>
       </Card>

@@ -32,7 +32,7 @@ async function HeaderAvatar() {
   const user = await getRequestUser();
   if (!user) return null;
 
-  const headerProfile = await getRequestProfile(user.id);
+  const headerProfile = await getRequestProfile();
 
   return (
     <UserAvatar
